@@ -1,761 +1,635 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Grand Colosseum - P2P Gladiator Duel</title>
-    <style>
-      body,
-      html {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: #87ceeb;
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        user-select: none;
-        -webkit-user-select: none;
-      }
-      #canvas-container {
-        width: 100vw;
-        height: 100vh;
-        position: fixed;
-        top: 0;
-        left: 0;
-        z-index: 1;
-        display: block;
-      }
-      #hud {
-        position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 40px;
-        align-items: center;
-        color: #fff;
-        font-weight: 900;
-        font-size: 28px;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
-        pointer-events: none;
-        z-index: 10;
-        display: none;
-      }
-      .score-box {
-        background: rgba(139, 69, 19, 0.85);
-        border: 2px solid #ffd700;
-        padding: 10px 25px;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-      }
-      #instructions {
-        position: absolute;
-        bottom: 25px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: #fff;
-        background: rgba(20, 20, 20, 0.85);
-        border: 1px solid rgba(255, 215, 0, 0.4);
-        padding: 14px 28px;
-        border-radius: 10px;
-        font-size: 14px;
-        text-align: center;
-        pointer-events: none;
-        z-index: 10;
-        backdrop-filter: blur(5px);
-        display: none;
-      }
-      #overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(20, 15, 10, 0.96);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 100;
-        color: white;
-        box-sizing: border-box;
-        padding: 20px;
-      }
-      #overlay h1 {
-        font-size: 44px;
-        margin-bottom: 10px;
-        color: #ffd700;
-        text-transform: uppercase;
-        letter-spacing: 3px;
-        text-shadow: 0 3px 10px rgba(255, 215, 0, 0.4);
-      }
-      #overlay p {
-        color: #d2b48c;
-        margin-bottom: 25px;
-        font-size: 16px;
-      }
-      .input-group {
-        margin-bottom: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-      }
-      .roman-input {
-        padding: 12px 20px;
-        font-size: 16px;
-        border-radius: 8px;
-        border: 2px solid #ffd700;
-        background: #2c1e12;
-        color: #fff;
-        outline: none;
-        text-align: center;
-        width: 250px;
-      }
-      .btn-group {
-        display: flex;
-        gap: 20px;
-      }
-      .roman-btn {
-        background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
-        color: #2c1e12;
-        border: none;
-        padding: 14px 32px;
-        font-size: 16px;
-        font-weight: 800;
-        border-radius: 8px;
-        cursor: pointer;
-        box-shadow: 0 4px 20px rgba(255, 140, 0, 0.5);
-        transition: all 0.2s ease;
-        text-transform: uppercase;
-      }
-      .roman-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 25px rgba(255, 215, 0, 0.7);
-      }
-      .roman-btn.secondary {
-        background: linear-gradient(135deg, #cd7f32 0%, #8b4513 100%);
-        color: #fff;
-        box-shadow: 0 4px 20px rgba(139, 69, 19, 0.5);
-      }
-      .roman-btn:disabled {
-        background: #4a4a4a !important;
-        color: #888888 !important;
-        cursor: not-allowed;
-        box-shadow: none;
-        transform: none;
-      }
-      #lobby-container {
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
-        max-width: 450px;
-      }
-      #player-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 15px 0;
-        background: rgba(44, 30, 18, 0.8);
-        border: 1px solid #ffd700;
-        border-radius: 8px;
-        overflow: hidden;
-      }
-      #player-table th,
-      #player-table td {
-        padding: 12px;
-        text-align: center;
-        border-bottom: 1px solid rgba(255, 215, 0, 0.2);
-        color: #ffd700;
-      }
-      #player-table th {
-        background: #5c3a21;
-      }
-      #qrcode-container {
-        margin: 15px 0;
-        padding: 10px;
-        background: white;
-        border-radius: 8px;
-        display: none;
-      }
-      #status-msg {
-        margin-top: 10px;
-        font-weight: bold;
-        color: #ffd700;
-        text-align: center;
-        min-height: 24px;
-      }
-      #room-code-display {
-        font-size: 22px;
-        font-weight: 900;
-        color: #ffd700;
-        margin-top: 5px;
-        text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-        display: none;
-      }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/trystero@0.17.0/trystero-torrent.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-  </head>
-  <body>
-    <div id="overlay">
-      <h1>Grand Colosseum</h1>
-      <p>P2P Gladiator Duel</p>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Grand Colosseum - P2P Gladiator Duel</title>
+<style>
+  body,html{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#87ceeb;font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif;user-select:none;-webkit-user-select:none}
+  #canvas-container{width:100vw;height:100vh;position:fixed;top:0;left:0;z-index:1;touch-action:none}
+  #hud{position:absolute;top:20px;left:50%;transform:translateX(-50%);display:none;gap:30px;align-items:center;color:#fff;font-weight:900;font-size:26px;text-shadow:0 2px 4px rgba(0,0,0,.6);pointer-events:none;z-index:10}
+  .score-box{background:rgba(139,69,19,.85);border:2px solid #ffd700;padding:10px 25px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,.4)}
+  #crosshair{position:absolute;top:50%;left:50%;width:10px;height:10px;margin:-5px;border:2px solid #ffd700;border-radius:50%;z-index:10;pointer-events:none;display:none;opacity:.8}
+  #banner{position:absolute;top:30%;width:100%;text-align:center;font-size:clamp(34px,8vw,90px);font-weight:900;color:#fff;-webkit-text-stroke:2px #3a1d0a;text-shadow:0 6px 0 #3a1d0a;opacity:0;pointer-events:none;z-index:11}
+  #banner.pop{animation:pop 1.1s ease-out forwards}
+  @keyframes pop{0%{transform:scale(.4);opacity:0}15%{transform:scale(1.2);opacity:1}70%{transform:scale(1);opacity:1}100%{transform:scale(1.05);opacity:0}}
+  #flash{position:absolute;inset:0;opacity:0;pointer-events:none;z-index:9;transition:opacity .4s}
+  #guard-bar{position:absolute;bottom:90px;left:50%;width:220px;height:10px;margin-left:-110px;border:2px solid #ffd700;border-radius:6px;overflow:hidden;background:rgba(0,0,0,.4);display:none;z-index:10}
+  #guard-bar b{display:block;height:100%;width:100%;background:linear-gradient(90deg,#35e0ff,#7cff6b)}
+  #instructions{position:absolute;bottom:25px;left:50%;transform:translateX(-50%);color:#fff;background:rgba(20,20,20,.85);border:1px solid rgba(255,215,0,.4);padding:12px 24px;border-radius:10px;font-size:14px;text-align:center;pointer-events:none;z-index:10;backdrop-filter:blur(5px);display:none;max-width:90vw}
+  #overlay{position:absolute;inset:0;background:rgba(20,15,10,.96);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:100;color:#fff;box-sizing:border-box;padding:20px;transition:opacity .5s}
+  #overlay h1{font-size:clamp(30px,6vw,44px);margin:0 0 10px;color:#ffd700;text-transform:uppercase;letter-spacing:3px;text-shadow:0 3px 10px rgba(255,215,0,.4);text-align:center}
+  #overlay p{color:#d2b48c;margin:0 0 25px;font-size:16px}
+  .input-group{margin-bottom:20px;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .roman-input{padding:12px 20px;font-size:16px;border-radius:8px;border:2px solid #ffd700;background:#2c1e12;color:#fff;outline:none;text-align:center;width:250px;box-sizing:border-box}
+  .btn-group{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
+  .roman-btn{background:linear-gradient(135deg,#ffd700 0%,#ff8c00 100%);color:#2c1e12;border:none;padding:14px 32px;font-size:16px;font-weight:800;border-radius:8px;cursor:pointer;box-shadow:0 4px 20px rgba(255,140,0,.5);transition:all .2s ease;text-transform:uppercase}
+  .roman-btn:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(255,215,0,.7)}
+  .roman-btn.secondary{background:linear-gradient(135deg,#cd7f32 0%,#8b4513 100%);color:#fff;box-shadow:0 4px 20px rgba(139,69,19,.5)}
+  .roman-btn:disabled{background:#4a4a4a!important;color:#888!important;cursor:not-allowed;box-shadow:none;transform:none}
+  #lobby-container{display:none;flex-direction:column;align-items:center;width:100%;max-width:450px}
+  #player-table{width:100%;border-collapse:collapse;margin:15px 0;background:rgba(44,30,18,.8);border:1px solid #ffd700;border-radius:8px;overflow:hidden}
+  #player-table th,#player-table td{padding:12px;text-align:center;border-bottom:1px solid rgba(255,215,0,.2);color:#ffd700}
+  #player-table th{background:#5c3a21}
+  #qrcode-container{margin:15px 0;padding:10px;background:#fff;border-radius:8px;display:none}
+  #status-msg{margin-top:10px;font-weight:bold;color:#ffd700;text-align:center;min-height:24px}
+  #room-code-display{font-size:22px;font-weight:900;color:#ffd700;margin-top:5px;text-shadow:0 0 10px rgba(255,215,0,.5);display:none}
+  #name-error{color:#ff8a8a;min-height:18px;font-size:14px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+</head>
+<body>
+<div id="overlay">
+  <h1 id="title">Grand Colosseum</h1>
+  <p id="subtitle">P2P Gladiator Duel</p>
 
-      <div id="name-screen" class="input-group">
-        <label for="player-name-input" style="color: #d2b48c; font-weight: 600"
-          >Enter Your Gladiator Name:</label
-        >
-        <input
-          type="text"
-          id="player-name-input"
-          class="roman-input"
-          placeholder="Maximus"
-          maxlength="15"
-          value="Gladiator"
-        />
-        <div class="btn-group" style="margin-top: 10px">
-          <button class="roman-btn" onclick="setupLobby('host')">
-            Host Arena
-          </button>
-          <button class="roman-btn secondary" onclick="setupLobby('join')">
-            Join Arena
-          </button>
-        </div>
-      </div>
-
-      <div id="lobby-container">
-        <div id="qrcode-container">
-          <canvas id="qrcode"></canvas>
-        </div>
-        <div id="room-code-display"></div>
-        <div id="status-msg">Initializing Room...</div>
-
-        <table id="player-table">
-          <thead>
-            <tr>
-              <th>Gladiator Name</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="player-list-body">
-            <!-- Populated dynamically -->
-          </tbody>
-        </table>
-
-        <div id="action-container" style="margin-top: 15px; text-align: center">
-          <span
-            id="waiting-text"
-            style="color: #d2b48c; font-style: italic; display: none"
-            >Waiting for host to start the game...</span
-          >
-          <button
-            id="begin-battle-btn"
-            class="roman-btn"
-            onclick="hostStartBattle()"
-            disabled
-          >
-            Begin Battle
-          </button>
-        </div>
-      </div>
+  <div id="name-screen" class="input-group">
+    <label for="player-name-input" style="color:#d2b48c;font-weight:600">Enter Your Gladiator Name:</label>
+    <input type="text" id="player-name-input" class="roman-input" placeholder="Maximus" maxlength="15" value="Gladiator" />
+    <input type="text" id="room-input" class="roman-input" placeholder="Room code (to join)" maxlength="8" />
+    <div id="name-error"></div>
+    <div class="btn-group">
+      <button class="roman-btn" id="host-btn" onclick="setupLobby('host')">Host Arena</button>
+      <button class="roman-btn secondary" id="join-btn" onclick="setupLobby('join')">Join Arena</button>
     </div>
+  </div>
 
-    <div id="hud">
-      <div class="score-box">
-        <span id="p1-name">YOU</span>: <span id="p1-score">0</span>
-      </div>
-      <div style="font-size: 18px; color: #ffd700">VS</div>
-      <div class="score-box">
-        <span id="p2-name">OPPONENT</span>: <span id="p2-score">0</span>
-      </div>
+  <div id="lobby-container">
+    <div id="qrcode-container"><canvas id="qrcode"></canvas></div>
+    <div id="room-code-display"></div>
+    <div id="status-msg">Initializing Room...</div>
+    <table id="player-table">
+      <thead><tr><th>Gladiator Name</th><th>Status</th></tr></thead>
+      <tbody id="player-list-body"></tbody>
+    </table>
+    <div style="margin-top:15px;text-align:center">
+      <span id="waiting-text" style="color:#d2b48c;font-style:italic;display:none">Waiting for host to start the game...</span>
+      <button id="begin-battle-btn" class="roman-btn" onclick="hostStartBattle()" disabled>Begin Battle</button>
     </div>
-
-    <div id="canvas-container"></div>
-
-    <div id="instructions">
-      <b>Controls:</b> Mouse to Aim & Swing Sword. <br />
-      <b>Click & Hold Left Mouse</b> to DEFEND/PARRY STANCE. Release to SLASH!
-      First to 3 wins.
-    </div>
-
-    <script>
-      let scene, camera, renderer, clock;
-      let sendAction, getAction;
-      let myName = "Gladiator",
-        oppName = "Waiting for Challenger...";
-      let myScore = 0,
-        oppScore = 0;
-      let isHost = false,
-        gameState = "waiting";
-      let peerConnected = false;
-      let localChannel = null;
-
-      let swordGroup, oppMesh, oppSword;
-      let isDefending = false;
-      let lastMousePos = { x: 0, y: 0 };
-      let spectators = [],
-        sparkParticles;
-
-      const config = { appId: "grand-colosseum-gladiator-v15" };
-
-      window.addEventListener("load", () => {
-        initThreeScene();
-
-        const params = new URLSearchParams(window.location.search);
-        const roomParam = params.get("room");
-        if (roomParam) {
-          isHost = false;
-          document.getElementById("name-screen").style.display = "none";
-          document.getElementById("lobby-container").style.display = "flex";
-          document.getElementById("status-msg").innerText =
-            "Connecting to Arena...";
-
-          let entered = prompt("Enter your Gladiator Name:", "Spartacus");
-          if (entered) myName = entered;
-          document.getElementById("p1-name").innerText = myName.toUpperCase();
-
-          document.getElementById("begin-battle-btn").style.display = "none";
-          document.getElementById("waiting-text").style.display = "inline";
-
-          renderTable();
-          startConnection(roomParam);
-        }
-      });
-
-      window.setupLobby = function (mode) {
-        const nameInput = document
-          .getElementById("player-name-input")
-          .value.trim();
-        if (nameInput) myName = nameInput;
-        document.getElementById("p1-name").innerText = myName.toUpperCase();
-
-        document.getElementById("name-screen").style.display = "none";
-        document.getElementById("lobby-container").style.display = "flex";
-
-        if (mode === "host") {
-          isHost = true;
-          const roomCode = Math.random()
-            .toString(36)
-            .substring(2, 8)
-            .toUpperCase();
-
-          const joinUrl =
-            window.location.origin +
-            window.location.pathname +
-            `?room=${roomCode}`;
-          new QRious({
-            element: document.getElementById("qrcode"),
-            value: joinUrl,
-            size: 140,
-          });
-          document.getElementById("qrcode-container").style.display = "block";
-
-          // Set room code explicitly in its own element so it ALWAYS shows
-          const codeDisplay = document.getElementById("room-code-display");
-          codeDisplay.style.display = "block";
-          codeDisplay.innerText = `ROOM CODE: ${roomCode}`;
-
-          document.getElementById("status-msg").innerText =
-            "Waiting for challenger to connect...";
-
-          document.getElementById("begin-battle-btn").style.display =
-            "inline-block";
-          document.getElementById("begin-battle-btn").disabled = true;
-          document.getElementById("waiting-text").style.display = "none";
-
-          renderTable();
-          startConnection(roomCode);
-        } else {
-          isHost = false;
-          const roomCode = prompt("Enter the Room Code:", "");
-          if (!roomCode) {
-            location.reload();
-            return;
-          }
-
-          const codeDisplay = document.getElementById("room-code-display");
-          codeDisplay.style.display = "block";
-          codeDisplay.innerText = `ROOM CODE: ${roomCode.toUpperCase()}`;
-
-          document.getElementById("status-msg").innerText =
-            "Connecting to Arena...";
-
-          document.getElementById("begin-battle-btn").style.display = "none";
-          document.getElementById("waiting-text").style.display = "inline";
-
-          renderTable();
-          startConnection(roomCode.toUpperCase());
-        }
-      };
-
-      window.hostStartBattle = function () {
-        if (!peerConnected) return;
-        broadcastData({ type: "start-battle" });
-        beginBattle();
-      };
-
-      function broadcastData(data) {
-        if (sendAction) sendAction(data);
-        if (localChannel) localChannel.postMessage(data);
-      }
-
-      function renderTable() {
-        const tbody = document.getElementById("player-list-body");
-        tbody.innerHTML = `
-                <tr><td>${myName}</td><td>${isHost ? "Host (Ready)" : "Challenger (Ready)"}</td></tr>
-                <tr><td>${peerConnected ? oppName : "<em>Waiting for opponent...</em>"}</td><td>${peerConnected ? "Ready" : "Connecting"}</td></tr>
-            `;
-
-        if (isHost) {
-          const btn = document.getElementById("begin-battle-btn");
-          if (peerConnected) {
-            btn.disabled = false;
-            document.getElementById("status-msg").innerText =
-              `${oppName} connected! Ready for battle.`;
-          } else {
-            btn.disabled = true;
-          }
-        }
-      }
-
-      function startConnection(roomCode) {
-        // Local Browser BroadcastChannel as immediate fallback for same-device/same-network testing
-        try {
-          localChannel = new BroadcastChannel(`colosseum-${roomCode}`);
-          localChannel.onmessage = (e) => handleIncomingData(e.data);
-        } catch (err) {
-          console.log("BroadcastChannel unavailable");
-        }
-
-        // Trystero P2P signaling
-        try {
-          if (typeof joinRoom === "function") {
-            const trysteroRoom = joinRoom(config, roomCode);
-            [sendAction, getAction] = trysteroRoom.makeAction("gameAction");
-
-            trysteroRoom.onPeerJoin((peerId) => {
-              peerConnected = true;
-              renderTable();
-              broadcastData({ type: "sync-name", name: myName });
-            });
-
-            trysteroRoom.onPeerLeave((peerId) => {
-              peerConnected = false;
-              oppName = "Waiting for Challenger...";
-              document.getElementById("status-msg").innerText =
-                "Opponent disconnected.";
-              renderTable();
-            });
-
-            getAction((data) => handleIncomingData(data));
-          }
-        } catch (e) {
-          console.log("Trystero initialized in fallback mode");
-        }
-
-        // Keep broadcasting identity
-        setInterval(() => {
-          broadcastData({ type: "sync-name", name: myName });
-        }, 1000);
-      }
-
-      function handleIncomingData(data) {
-        if (data.type === "sync-name") {
-          if (oppName !== data.name) {
-            oppName = data.name;
-            peerConnected = true;
-            document.getElementById("p2-name").innerText =
-              oppName.toUpperCase();
-            renderTable();
-          }
-        } else if (data.type === "start-battle") {
-          beginBattle();
-        } else if (data.type === "move" && oppMesh) {
-          oppMesh.rotation.y = data.rotY;
-          oppMesh.position.x = data.posX;
-          if (oppSword) oppSword.rotation.x = data.swordX;
-        } else if (data.type === "attack") {
-          triggerOpponentAttack();
-        }
-      }
-
-      function beginBattle() {
-        gameState = "fighting";
-        document.getElementById("overlay").style.opacity = "0";
-        setTimeout(() => {
-          document.getElementById("overlay").style.display = "none";
-          document.getElementById("hud").style.display = "flex";
-          document.getElementById("instructions").style.display = "block";
-        }, 500);
-      }
-
-      function initThreeScene() {
-        const container = document.getElementById("canvas-container");
-
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb);
-
-        camera = new THREE.PerspectiveCamera(
-          75,
-          window.innerWidth / window.innerHeight,
-          0.1,
-          1000,
-        );
-        camera.position.set(0, 2.2, 0);
-
-        renderer = new THREE.WebGLRenderer({
-          antialias: true,
-          powerPreference: "high-performance",
-        });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setClearColor(0x87ceeb, 1);
-        renderer.shadowMap.enabled = true;
-        container.appendChild(renderer.domElement);
-
-        clock = new THREE.Clock();
-
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-        scene.add(ambientLight);
-
-        const sunLight = new THREE.DirectionalLight(0xfffaed, 1.5);
-        sunLight.position.set(30, 50, 30);
-        sunLight.castShadow = true;
-        scene.add(sunLight);
-
-        buildClassicColosseum();
-        buildPlayerAndOpponent();
-        buildSparksSystem();
-
-        window.addEventListener("mousemove", onMouseMove);
-        window.addEventListener("mousedown", () => {
-          if (gameState === "fighting") isDefending = true;
-        });
-        window.addEventListener("mouseup", () => {
-          if (isDefending && gameState === "fighting") {
-            isDefending = false;
-            triggerPlayerAttack();
-          }
-        });
-
-        window.addEventListener("resize", onWindowResize);
-        renderer.setAnimationLoop(animate);
-      }
-
-      function buildClassicColosseum() {
-        const floorGeo = new THREE.CylinderGeometry(25, 25, 1, 64);
-        const floorMat = new THREE.MeshStandardMaterial({
-          color: 0xd2b48c,
-          roughness: 0.9,
-        });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.position.y = -0.5;
-        floor.receiveShadow = true;
-        scene.add(floor);
-
-        const tierLevels = 8;
-        for (let i = 0; i < tierLevels; i++) {
-          const radius = 26 + i * 4;
-          const height = i * 2.5;
-          const tierGeo = new THREE.CylinderGeometry(
-            radius,
-            radius + 3.5,
-            2.2,
-            48,
-            1,
-            true,
-          );
-          const tierMat = new THREE.MeshStandardMaterial({
-            color: 0xc2a67a,
-            roughness: 0.8,
-          });
-          const tier = new THREE.Mesh(tierGeo, tierMat);
-          tier.position.y = height - 0.5;
-          scene.add(tier);
-
-          createSpectatorCrowd(radius + 0.5, height + 1.2, 50 + i * 10);
-        }
-      }
-
-      function createSpectatorCrowd(radius, yPos, count) {
-        const bodyGeo = new THREE.CapsuleGeometry(0.3, 0.7, 4, 8);
-        const headGeo = new THREE.SphereGeometry(0.25, 8, 8);
-
-        for (let c = 0; c < count; c++) {
-          const angle = (c / count) * Math.PI * 2 + Math.random() * 0.1;
-          const x = Math.cos(angle) * radius;
-          const z = Math.sin(angle) * radius;
-
-          const spectatorGroup = new THREE.Group();
-          const bodyMat = new THREE.MeshLambertMaterial({
-            color: Math.random() > 0.4 ? 0xffffff : 0x990000,
-          });
-
-          const body = new THREE.Mesh(bodyGeo, bodyMat);
-          body.position.y = 0.5;
-          spectatorGroup.add(body);
-
-          const head = new THREE.Mesh(
-            headGeo,
-            new THREE.MeshLambertMaterial({ color: 0xffd1b3 }),
-          );
-          head.position.y = 1.1;
-          spectatorGroup.add(head);
-
-          spectatorGroup.position.set(x, yPos, z);
-          spectatorGroup.lookAt(0, yPos, 0);
-          scene.add(spectatorGroup);
-          spectators.push({
-            group: spectatorGroup,
-            speed: 2 + Math.random() * 4,
-          });
-        }
-      }
-
-      function buildPlayerAndOpponent() {
-        swordGroup = new THREE.Group();
-        const handGeo = new THREE.BoxGeometry(0.25, 0.25, 0.5);
-        const armorMat = new THREE.MeshStandardMaterial({
-          color: 0x8b7355,
-          metalness: 0.6,
-        });
-        const hand = new THREE.Mesh(handGeo, armorMat);
-        hand.position.set(0, -0.4, -0.6);
-        swordGroup.add(hand);
-
-        const bladeGeo = new THREE.BoxGeometry(0.12, 0.03, 2.0);
-        const bladeMat = new THREE.MeshStandardMaterial({
-          color: 0xe0e0e0,
-          metalness: 0.95,
-          roughness: 0.1,
-        });
-        const blade = new THREE.Mesh(bladeGeo, bladeMat);
-        blade.position.set(0, -0.3, -2.0);
-        swordGroup.add(blade);
-
-        camera.add(swordGroup);
-        scene.add(camera);
-
-        const oppGroup = new THREE.Group();
-        const torso = new THREE.Mesh(
-          new THREE.BoxGeometry(1.2, 1.8, 0.6),
-          new THREE.MeshStandardMaterial({ color: 0x990000 }),
-        );
-        torso.position.y = 0.9;
-        oppGroup.add(torso);
-
-        const oppHead = new THREE.Mesh(
-          new THREE.SphereGeometry(0.35, 16, 16),
-          new THREE.MeshStandardMaterial({ color: 0xffd1b3 }),
-        );
-        oppHead.position.y = 2.1;
-        oppGroup.add(oppHead);
-
-        const oppSwordGroup = new THREE.Group();
-        const oBlade = new THREE.Mesh(bladeGeo, bladeMat);
-        oBlade.position.set(0.6, 1.2, -1.0);
-        oBlade.rotation.y = Math.PI;
-        oppSwordGroup.add(oBlade);
-        oppGroup.add(oppSwordGroup);
-
-        oppGroup.position.set(0, 0, -12);
-        scene.add(oppGroup);
-        oppMesh = oppGroup;
-        oppSword = oppSwordGroup;
-      }
-
-      function buildSparksSystem() {
-        const geom = new THREE.BufferGeometry();
-        const positions = new Float32Array(150);
-        geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-        sparkParticles = new THREE.Points(
-          geom,
-          new THREE.PointsMaterial({
-            color: 0xffd700,
-            size: 0.2,
-            transparent: true,
-            opacity: 0,
-          }),
-        );
-        scene.add(sparkParticles);
-      }
-
-      function onMouseMove(e) {
-        if (gameState !== "fighting") return;
-        const movementX = e.movementX || e.clientX - lastMousePos.x;
-        const movementY = e.movementY || e.clientY - lastMousePos.y;
-        lastMousePos = { x: e.clientX, y: e.clientY };
-
-        camera.rotation.y -= movementX * 0.003;
-        camera.rotation.x -= movementY * 0.003;
-        camera.rotation.x = Math.max(-0.5, Math.min(0.5, camera.rotation.x));
-
-        if (swordGroup) {
-          swordGroup.rotation.y = -movementX * 0.01;
-          swordGroup.rotation.x = movementY * 0.01;
-        }
-
-        broadcastData({
-          type: "move",
-          rotY: camera.rotation.y,
-          posX: 0,
-          swordX: swordGroup.rotation.x,
-        });
-      }
-
-      function triggerPlayerAttack() {
-        let startTime = clock.getElapsedTime();
-        const swingAnim = () => {
-          let elapsed = clock.getElapsedTime() - startTime;
-          if (elapsed < 0.25) {
-            swordGroup.position.z = THREE.MathUtils.lerp(0, -0.8, elapsed * 4);
-            requestAnimationFrame(swingAnim);
-          } else {
-            swordGroup.position.z = 0;
-          }
-        };
-        swingAnim();
-
-        broadcastData({ type: "attack" });
-
-        const distance = camera.position.distanceTo(oppMesh.position);
-        if (distance < 14) {
-          myScore++;
-          document.getElementById("p1-score").innerText = myScore;
-          checkWinCondition();
-        }
-      }
-
-      function triggerOpponentAttack() {
-        if (isDefending) return;
-        oppScore++;
-        document.getElementById("p2-score").innerText = oppScore;
-        checkWinCondition();
-      }
-
-      function checkWinCondition() {
-        if (myScore >= 3 || oppScore >= 3) {
-          alert(myScore >= 3 ? "Glory! Victory!" : "Defeat!");
-          location.reload();
-        }
-      }
-
-      function animate() {
-        const time = clock.getElapsedTime();
-        spectators.forEach((s, idx) => {
-          s.group.position.y += Math.sin(time * 3 + idx) * 0.0015;
-        });
-        renderer.render(scene, camera);
-      }
-
-      function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      }
-    </script>
-  </body>
+  </div>
+</div>
+
+<div id="hud">
+  <div class="score-box"><span id="p1-name">YOU</span>: <span id="p1-score">0</span></div>
+  <div style="font-size:18px;color:#ffd700">VS</div>
+  <div class="score-box"><span id="p2-name">OPPONENT</span>: <span id="p2-score">0</span></div>
+</div>
+<div id="crosshair"></div>
+<div id="banner"></div>
+<div id="flash"></div>
+<div id="guard-bar"><b id="guard-fill"></b></div>
+<div id="canvas-container"></div>
+<div id="instructions">
+  <b>Move mouse / finger</b> to aim at your rival. <b>Hold</b> click/touch to GUARD, <b>release</b> to SLASH.<br />
+  Raise your guard just before a strike lands to PARRY and stun your foe. First to 3 hits wins.
+</div>
+
+<script>
+/* ============ constants & state ============ */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const TARGET = 3, PARRY_MS = 300, COOLDOWN = 700, STUN_MS = 1600, LOCK_MS = 1600, MAX_GUARD = 1800, OPP_Z = -8;
+
+let scene, camera, renderer;
+let myName = "Gladiator", oppName = "Waiting for Challenger...";
+let myScore = 0, oppScore = 0;
+let isHost = false, gameState = "waiting", peerConnected = false;
+let peer = null, conn = null;
+let scores = { host: 0, guest: 0 };          // authoritative on host
+const mkP = () => ({ def: false, since: 0, stunUntil: 0, last: 0 });
+const P = { host: mkP(), guest: mkP() };      // combat state per role
+const meR = () => (isHost ? "host" : "guest");
+const otR = () => (isHost ? "guest" : "host");
+let lockUntil = 0, guardLockUntil = 0, localLast = 0, overlayTimer = null;
+const aim = { nx: 0, ny: 0 };
+let oppYaw = 0, mySwingT = -1, oppSwingT = -1, oppHurtT = -1, cheer = 0, lastFrame = performance.now();
+let swordGroup, shieldFx, opp, crowd, sparks, spP, spV, spL, spC, spI = 0;
+let lastStateSent = 0;
+
+/* ============ lobby & networking ============ */
+window.addEventListener("load", () => {
+  initThreeScene();
+  if (location.protocol === "file:") {
+    $("name-error").textContent = "Open this page via https (e.g. GitHub Pages) so devices can connect.";
+  }
+  const room = new URLSearchParams(location.search).get("room");
+  if (room) {
+    $("room-input").value = room.toUpperCase();
+    $("host-btn").style.display = "none";
+  }
+});
+
+window.setupLobby = function (mode) {
+  const n = $("player-name-input").value.trim();
+  if (n) myName = n.slice(0, 15);
+  $("p1-name").textContent = myName.toUpperCase();
+
+  let code = "";
+  if (mode === "join") {
+    code = $("room-input").value.trim().toUpperCase();
+    if (!code) { $("name-error").textContent = "Enter the room code first."; return; }
+  }
+  $("name-error").textContent = "";
+  $("name-screen").style.display = "none";
+  $("lobby-container").style.display = "flex";
+  isHost = mode === "host";
+
+  if (isHost) {
+    code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const joinUrl = location.origin + location.pathname + "?room=" + code;
+    new QRious({ element: $("qrcode"), value: joinUrl, size: 140 });
+    $("qrcode-container").style.display = "block";
+    $("status-msg").textContent = "Waiting for challenger to connect...";
+    $("begin-battle-btn").style.display = "inline-block";
+    $("begin-battle-btn").disabled = true;
+    $("waiting-text").style.display = "none";
+  } else {
+    $("status-msg").textContent = "Connecting to Arena...";
+    $("begin-battle-btn").style.display = "none";
+    $("waiting-text").style.display = "inline";
+  }
+  const cd = $("room-code-display");
+  cd.style.display = "block";
+  cd.textContent = "ROOM CODE: " + code;
+  renderTable();
+  startConnection(code);
+};
+
+function renderTable() {
+  const tb = $("player-list-body");
+  tb.innerHTML = "";
+  const row = (name, status, em) => {
+    const tr = document.createElement("tr");
+    const a = document.createElement("td"), b = document.createElement("td");
+    if (em) { const e = document.createElement("em"); e.textContent = name; a.appendChild(e); } else a.textContent = name;
+    b.textContent = status;
+    tr.append(a, b);
+    tb.appendChild(tr);
+  };
+  row(myName, isHost ? "Host (Ready)" : "Challenger (Ready)");
+  if (peerConnected) row(oppName, "Ready"); else row("Waiting for opponent...", "Connecting", true);
+  if (isHost) {
+    $("begin-battle-btn").disabled = !peerConnected;
+    if (peerConnected) $("status-msg").textContent = oppName + " connected! Ready for battle.";
+  }
+}
+
+const send = (d) => { if (conn && conn.open) conn.send(d); };
+
+function setupConn(c) {
+  conn = c;
+  c.on("open", () => {
+    peerConnected = true;
+    renderTable();
+    c.send({ type: "name", name: myName });
+  });
+  c.on("data", onData);
+  c.on("close", () => {
+    if (conn !== c) return;
+    conn = null;
+    peerConnected = false;
+    oppName = "Waiting for Challenger...";
+    $("p2-name").textContent = "OPPONENT";
+    backToLobby(isHost ? "Opponent disconnected." : "Host disconnected. Reload to rejoin.");
+  });
+}
+
+function startConnection(code) {
+  const hostId = "colosseum-" + code;
+  window.addEventListener("beforeunload", () => peer && peer.destroy());
+  if (isHost) {
+    peer = new Peer(hostId);
+    peer.on("connection", (c) => {
+      if (conn && conn.open) { c.close(); return; }   // 1v1 only
+      setupConn(c);
+    });
+    peer.on("disconnected", () => peer && !peer.destroyed && peer.reconnect());
+    peer.on("error", (e) => $("status-msg").textContent = e.type === "unavailable-id"
+      ? "Room code already in use. Reload for a new one." : "Connection error: " + e.type);
+  } else {
+    peer = new Peer();
+    let tries = 0;
+    const attempt = () => setupConn(peer.connect(hostId, { reliable: true, serialization: "json" }));
+    peer.on("open", attempt);
+    peer.on("error", (e) => {
+      if (e.type === "peer-unavailable" && tries++ < 10) {
+        $("status-msg").textContent = "Looking for arena... (" + tries + ")";
+        setTimeout(attempt, 1500);
+      } else $("status-msg").textContent = e.type === "peer-unavailable"
+        ? "Arena not found. Check the room code." : "Connection error: " + e.type;
+    });
+  }
+}
+
+function onData(d) {
+  if (!d || typeof d !== "object") return;
+  switch (d.type) {
+    case "name":
+      oppName = String(d.name || "Rival").slice(0, 15);
+      $("p2-name").textContent = oppName.toUpperCase();
+      renderTable();
+      break;
+    case "start": beginBattle(); break;
+    case "state": {
+      const o = P[otR()];
+      if (d.def && !o.def) o.since = performance.now();
+      o.def = !!d.def;
+      oppYaw = Number(d.yaw) || 0;
+      break;
+    }
+    case "attack": if (isHost) hostResolve("guest", !!d.aimed); break;
+    case "result": applyResult(d); break;
+  }
+}
+
+window.hostStartBattle = function () {
+  if (!peerConnected || !isHost) return;
+  send({ type: "start" });
+  beginBattle();
+};
+
+/* ============ game flow ============ */
+function showOverlay() {
+  clearTimeout(overlayTimer);
+  const o = $("overlay");
+  o.style.display = "flex";
+  requestAnimationFrame(() => (o.style.opacity = "1"));
+  $("hud").style.display = $("instructions").style.display = $("crosshair").style.display = $("guard-bar").style.display = "none";
+}
+
+function backToLobby(msg) {
+  gameState = "waiting";
+  Object.assign(P.host, mkP()); Object.assign(P.guest, mkP());
+  $("title").textContent = "Grand Colosseum";
+  $("begin-battle-btn").textContent = "Begin Battle";
+  $("status-msg").textContent = msg;
+  showOverlay();
+  renderTable();
+}
+
+function beginBattle() {
+  scores = { host: 0, guest: 0 };
+  myScore = oppScore = 0;
+  $("p1-score").textContent = $("p2-score").textContent = "0";
+  Object.assign(P.host, mkP()); Object.assign(P.guest, mkP());
+  lockUntil = performance.now() + 1200;
+  guardLockUntil = 0;
+  gameState = "fighting";
+  const o = $("overlay");
+  o.style.opacity = "0";
+  overlayTimer = setTimeout(() => {
+    o.style.display = "none";
+    $("hud").style.display = "flex";
+    $("instructions").style.display = "block";
+    $("crosshair").style.display = "block";
+    $("guard-bar").style.display = "block";
+  }, 500);
+  showBanner("FIGHT!", "#ffd700");
+}
+
+function endGame(win) {
+  gameState = "over";
+  $("title").textContent = win ? "Glory! Victory!" : "Defeat!";
+  $("status-msg").textContent = win ? "The crowd chants your name." : "The crowd demands a rematch.";
+  $("begin-battle-btn").textContent = "Rematch";
+  if (!isHost) { $("waiting-text").textContent = "Waiting for host to start a rematch..."; }
+  showOverlay();
+  renderTable();
+}
+
+function showBanner(text, color) {
+  const b = $("banner");
+  b.textContent = text; b.style.color = color || "#fff";
+  b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
+}
+function flash(color, o = 0.5) {
+  const f = $("flash");
+  f.style.transition = "none"; f.style.background = color; f.style.opacity = o;
+  requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transition = "opacity .4s"; f.style.opacity = 0; }));
+}
+
+/* ============ combat (host is the referee) ============ */
+function aimedAtOpponent() {
+  const fwd = new THREE.Vector3();
+  camera.getWorldDirection(fwd);
+  const to = new THREE.Vector3(0, 1.3, OPP_Z).sub(camera.position).normalize();
+  return fwd.angleTo(to) < 0.28;
+}
+
+function localAttack() {
+  const now = performance.now();
+  if (gameState !== "fighting" || now < lockUntil || now < P[meR()].stunUntil || now - localLast < COOLDOWN) return;
+  localLast = now;
+  mySwingT = now;
+  const aimed = aimedAtOpponent();
+  if (isHost) hostResolve("host", aimed); else send({ type: "attack", aimed });
+}
+
+function hostResolve(by, aimed) {
+  const now = performance.now();
+  const a = P[by], d = P[by === "host" ? "guest" : "host"];
+  if (gameState !== "fighting" || now < lockUntil || now < a.stunUntil || now - a.last < COOLDOWN * 0.8) return;
+  a.last = now;
+  let ev = "miss";
+  if (aimed) ev = d.def ? (now - d.since <= PARRY_MS ? "parry" : "block") : "hit";
+  if (ev === "hit") { scores[by]++; lockUntil = now + LOCK_MS; }
+  if (ev === "parry") a.stunUntil = now + STUN_MS;
+  const msg = { type: "result", ev, by, hs: scores.host, gs: scores.guest, over: scores.host >= TARGET || scores.guest >= TARGET };
+  send(msg);
+  applyResult(msg);
+}
+
+function applyResult(m) {
+  const now = performance.now();
+  myScore = isHost ? m.hs : m.gs;
+  oppScore = isHost ? m.gs : m.hs;
+  $("p1-score").textContent = myScore;
+  $("p2-score").textContent = oppScore;
+  const mine = m.by === meR();
+  if (!mine) oppSwingT = now;
+  const oppPos = new THREE.Vector3(0, 1.4, OPP_Z + 1), myPos = new THREE.Vector3(0, 1.6, -1.5);
+  if (m.ev === "hit") {
+    lockUntil = now + LOCK_MS;
+    cheer = 1;
+    if (mine) { showBanner("HIT!", "#35e0ff"); oppHurtT = now; burst(oppPos, 50, 0xff3355); flash("#fff", 0.3); }
+    else { showBanner("OUCH!", "#ff4466"); burst(myPos, 40, 0xff3355); flash("#f22", 0.55); }
+  } else if (m.ev === "block") {
+    showBanner("BLOCKED", "#ffd700");
+    burst(mine ? oppPos : myPos, 45, 0xffd23f);
+  } else if (m.ev === "parry") {
+    if (mine) { P[meR()].stunUntil = now + STUN_MS; showBanner("PARRIED! STUNNED", "#ff8c00"); flash("#ff8c00", 0.35); }
+    else { showBanner("PARRY!", "#ffd700"); flash("#fff", 0.4); oppHurtT = now; }
+    burst(mine ? oppPos : myPos, 80, 0xffffff);
+    cheer = 0.7;
+  } else if (mine) {
+    showBanner("MISS", "#cccccc");
+  }
+  if (m.over) setTimeout(() => endGame(myScore >= TARGET), 1300);
+}
+
+/* ============ input ============ */
+function sendState(force) {
+  const now = performance.now();
+  if (!force && now - lastStateSent < 66) return;
+  lastStateSent = now;
+  send({ type: "state", def: P[meR()].def, yaw: camera ? camera.rotation.y : 0 });
+}
+
+function startGuard() {
+  const now = performance.now(), me = P[meR()];
+  if (gameState !== "fighting" || me.def || now < me.stunUntil || now < guardLockUntil || now < lockUntil) return;
+  me.def = true; me.since = now;
+  sendState(true);
+}
+function releaseGuard(attack) {
+  const me = P[meR()];
+  if (!me.def) return;
+  me.def = false;
+  sendState(true);
+  if (attack) localAttack();
+}
+
+/* ============ three.js scene ============ */
+function initThreeScene() {
+  const container = $("canvas-container");
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x87ceeb);
+  scene.fog = new THREE.Fog(0xbfe3f5, 60, 160);
+
+  camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 300);
+  camera.rotation.order = "YXZ";
+  camera.position.set(0, 1.8, 0);
+  scene.add(camera);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  container.appendChild(renderer.domElement);
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xb08a5a, 0.85));
+  const sun = new THREE.DirectionalLight(0xfffaed, 1.2);
+  sun.position.set(12, 30, 14);
+  sun.castShadow = true;
+  Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15, near: 1, far: 80 });
+  scene.add(sun);
+
+  buildArena();
+  buildCrowd();
+  buildPlayerSword();
+  opp = makeGladiator();
+  opp.group.position.set(0, 0, OPP_Z);
+  scene.add(opp.group);
+  buildSparks();
+
+  addEventListener("pointermove", (e) => {
+    aim.nx = Math.max(-1, Math.min(1, (e.clientX / innerWidth - 0.5) * 2));
+    aim.ny = Math.max(-1, Math.min(1, (e.clientY / innerHeight - 0.5) * 2));
+  });
+  container.addEventListener("pointerdown", (e) => { if (e.button === 0) { aim.nx = (e.clientX / innerWidth - 0.5) * 2; aim.ny = (e.clientY / innerHeight - 0.5) * 2; startGuard(); } });
+  addEventListener("pointerup", () => releaseGuard(true));
+  addEventListener("pointercancel", () => releaseGuard(false));
+  addEventListener("contextmenu", (e) => e.preventDefault());
+  addEventListener("blur", () => releaseGuard(false));
+  addEventListener("resize", () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+  renderer.setAnimationLoop(animate);
+}
+
+function buildArena() {
+  const c = document.createElement("canvas"); c.width = c.height = 512;
+  const g = c.getContext("2d"), r = g.createRadialGradient(256, 256, 0, 256, 256, 256);
+  r.addColorStop(0, "#f0d9a8"); r.addColorStop(1, "#d2b48c");
+  g.fillStyle = r; g.fillRect(0, 0, 512, 512);
+  g.strokeStyle = "#a01020"; g.lineWidth = 14; g.beginPath(); g.arc(256, 256, 236, 0, 7); g.stroke();
+  g.strokeStyle = "#ffd700"; g.lineWidth = 6; g.beginPath(); g.arc(256, 256, 210, 0, 7); g.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(25, 64), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  const pts = [new THREE.Vector2(25, 0), new THREE.Vector2(25, 2.2)];
+  let r0 = 25, h = 2.2;
+  for (let i = 0; i < 8; i++) {
+    r0 += 3.2; pts.push(new THREE.Vector2(r0, h));
+    h += 1.4; pts.push(new THREE.Vector2(r0, h));
+  }
+  pts.push(new THREE.Vector2(r0, h + 3));
+  scene.add(new THREE.Mesh(new THREE.LatheGeometry(pts, 96), new THREE.MeshStandardMaterial({ color: 0xc9ac7d, roughness: 0.9, side: THREE.DoubleSide })));
+}
+
+function buildCrowd() {
+  const rows = [];
+  for (let i = 0; i < 8; i++) {
+    const r = 26.6 + 3.2 * i, y = 2.2 + 1.4 * i, n = Math.floor((2 * Math.PI * r) / 1.5);
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2 + Math.random() * 0.03;
+      rows.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, y, p: Math.random() * 6.28, sp: 3 + Math.random() * 4 });
+    }
+  }
+  const N = rows.length;
+  const bodies = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.28, 0.4, 1.0, 8).translate(0, 0.5, 0), new THREE.MeshLambertMaterial({ color: 0xffffff }), N);
+  const heads = new THREE.InstancedMesh(new THREE.SphereGeometry(0.26, 10, 8), new THREE.MeshLambertMaterial({ color: 0xffffff }), N);
+  const col = new THREE.Color(), toga = [0xffffff, 0xf3ecdd, 0xb01020, 0xffffff, 0x6a2a8f, 0xd4a017], skin = [0xf1c27d, 0xc68642, 0x8d5524, 0xe0ac69, 0xffdbac];
+  rows.forEach((v, i) => {
+    bodies.setColorAt(i, col.setHex(toga[Math.floor(Math.random() * toga.length)]));
+    heads.setColorAt(i, col.setHex(skin[Math.floor(Math.random() * skin.length)]));
+  });
+  bodies.frustumCulled = heads.frustumCulled = false;
+  scene.add(bodies, heads);
+  crowd = { rows, bodies, heads, d: new THREE.Object3D() };
+}
+
+function updateCrowd(t) {
+  const { rows, bodies, heads, d } = crowd;
+  for (let i = 0; i < rows.length; i++) {
+    const v = rows[i], b = Math.abs(Math.sin(t * v.sp + v.p)) * (0.03 + cheer * 0.35);
+    d.position.set(v.x, v.y + b, v.z);
+    d.lookAt(0, v.y + b, 0);
+    d.updateMatrix(); bodies.setMatrixAt(i, d.matrix);
+    d.position.y = v.y + b + 1.25;
+    d.updateMatrix(); heads.setMatrixAt(i, d.matrix);
+  }
+  bodies.instanceMatrix.needsUpdate = heads.instanceMatrix.needsUpdate = true;
+}
+
+function buildPlayerSword() {
+  swordGroup = new THREE.Group();
+  const M = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.4, metalness: 0.5 }, o));
+  const glove = new THREE.Mesh(new THREE.SphereGeometry(0.1, 14, 10), M(0xc99068, { metalness: 0, roughness: 0.7 }));
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.8, 10).translate(0, -0.4, 0), M(0xc99068, { metalness: 0, roughness: 0.7 }));
+  arm.rotation.x = -0.9; arm.position.z = 0.02;
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.3, 8), M(0x3a2416, { metalness: 0 }));
+  const guard = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.045, 0.07), M(0xc79a3b, { metalness: 0.8 }));
+  guard.position.y = 0.16;
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.1, 0.018), M(0xe8f4ff, { metalness: 0.95, roughness: 0.15, emissive: 0x1a90b0, emissiveIntensity: 0.5 }));
+  blade.position.y = 0.73;
+  swordGroup.add(glove, arm, grip, guard, blade);
+  shieldFx = new THREE.Mesh(new THREE.CircleGeometry(0.7, 32), new THREE.MeshBasicMaterial({ color: 0x35e0ff, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false }));
+  shieldFx.position.set(0, 0, -1); shieldFx.visible = false;
+  camera.add(swordGroup, shieldFx);
+  swordGroup.position.set(0.38, -0.5, -0.75);
+}
+
+function makeGladiator() {
+  const g = new THREE.Group();
+  const M = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.55, metalness: 0.3 }, o));
+  const add = (geo, m, x, y, z, p) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; (p || g).add(o); return o; };
+  const skin = M(0xd9a074, { metalness: 0 }), red = M(0xb01020, { metalness: 0, roughness: 0.8 }), bronze = M(0xc79a3b, { metalness: 0.7, roughness: 0.35 }), steel = M(0xe0e6f0, { metalness: 0.9, roughness: 0.2 });
+  [-0.2, 0.2].forEach((x) => { add(new THREE.CylinderGeometry(0.13, 0.1, 0.9, 12), skin, x, 0.45, 0); add(new THREE.BoxGeometry(0.22, 0.08, 0.38), M(0x3a2416), x, 0.05, 0.06); });
+  add(new THREE.CylinderGeometry(0.35, 0.48, 0.5, 16), red, 0, 0.95, 0);
+  add(new THREE.CylinderGeometry(0.5, 0.38, 0.85, 16), bronze, 0, 1.62, 0).scale.z = 0.65;
+  add(new THREE.SphereGeometry(0.24, 16, 12), skin, 0, 2.22, 0);
+  add(new THREE.SphereGeometry(0.29, 16, 12, 0, 6.283, 0, 1.9), bronze, 0, 2.26, 0);
+  add(new THREE.BoxGeometry(0.06, 0.28, 0.6), red, 0, 2.6, 0);
+  [-1, 1].forEach((s) => add(new THREE.SphereGeometry(0.25, 12, 10), bronze, s * 0.62, 2.0, 0));
+  const armR = new THREE.Group(); armR.position.set(-0.62, 1.95, 0); g.add(armR);
+  add(new THREE.CylinderGeometry(0.1, 0.09, 0.75, 10).translate(0, -0.38, 0), skin, 0, 0, 0, armR);
+  add(new THREE.SphereGeometry(0.12, 10, 8), skin, 0, -0.78, 0, armR);
+  add(new THREE.BoxGeometry(0.4, 0.07, 0.1), bronze, 0, -0.9, 0, armR);
+  add(new THREE.BoxGeometry(0.09, 1.4, 0.025), steel, 0, -1.65, 0, armR);
+  const armL = new THREE.Group(); armL.position.set(0.62, 1.95, 0); g.add(armL);
+  add(new THREE.CylinderGeometry(0.1, 0.09, 0.75, 10).translate(0, -0.38, 0), skin, 0, 0, 0, armL);
+  add(new THREE.CylinderGeometry(0.55, 0.55, 0.08, 28), M(0x8a1118, { metalness: 0.4 }), 0, -0.75, 0, armL);
+  add(new THREE.TorusGeometry(0.55, 0.05, 8, 28).rotateX(Math.PI / 2), bronze, 0, -0.75, 0, armL);
+  g.scale.setScalar(1.1);
+  return { group: g, armR, armL };
+}
+
+function buildSparks() {
+  const NP = 220;
+  spP = new Float32Array(NP * 3).fill(-999); spV = new Float32Array(NP * 3); spL = new Float32Array(NP); spC = new Float32Array(NP * 3);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(spP, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(spC, 3));
+  sparks = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.18, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  sparks.frustumCulled = false;
+  scene.add(sparks);
+}
+function burst(pos, n, hex) {
+  const c = new THREE.Color(hex), NP = spL.length;
+  for (let k = 0; k < n; k++) {
+    const i = spI++ % NP, a = Math.random() * 6.28, b = Math.random() * 3 - 1.5, s = Math.random() * 5;
+    spP.set([pos.x, pos.y, pos.z], i * 3);
+    spV.set([Math.cos(a) * Math.cos(b) * s, Math.sin(b) * s + 2, Math.sin(a) * Math.cos(b) * s], i * 3);
+    spC.set([c.r, c.g, c.b], i * 3);
+    spL[i] = 0.5 + Math.random() * 0.8;
+  }
+}
+function updateSparks(dt) {
+  for (let i = 0; i < spL.length; i++) {
+    if (spL[i] <= 0) continue;
+    spL[i] -= dt;
+    if (spL[i] <= 0) { spP[i * 3 + 1] = -999; continue; }
+    spV[i * 3 + 1] -= 9 * dt;
+    for (let j = 0; j < 3; j++) spP[i * 3 + j] += spV[i * 3 + j] * dt;
+    const f = 1 - dt * 1.2; spC[i * 3] *= f; spC[i * 3 + 1] *= f; spC[i * 3 + 2] *= f;
+  }
+  sparks.geometry.attributes.position.needsUpdate = sparks.geometry.attributes.color.needsUpdate = true;
+}
+
+/* ============ main loop ============ */
+const lerp = (a, b, t) => a + (b - a) * Math.min(1, t);
+function animate() {
+  const now = performance.now(), dt = Math.min((now - lastFrame) / 1000, 0.05), t = now / 1000;
+  lastFrame = now;
+  const me = P[meR()], ot = P[otR()], fighting = gameState === "fighting";
+
+  // guard stamina
+  if (me.def) {
+    const used = now - me.since;
+    $("guard-fill").style.width = Math.max(0, 100 - (used / MAX_GUARD) * 100) + "%";
+    if (used > MAX_GUARD) { releaseGuard(false); guardLockUntil = now + 800; }
+  } else $("guard-fill").style.width = Math.min(100, parseFloat($("guard-fill").style.width || 100) + dt * 60) + "%";
+  if (fighting && now - lastStateSent > 66) sendState(false);
+
+  // camera look
+  const stunned = now < me.stunUntil;
+  camera.rotation.y = lerp(camera.rotation.y, -aim.nx * 0.7, dt * 10);
+  camera.rotation.x = lerp(camera.rotation.x, -aim.ny * 0.25, dt * 10);
+  camera.rotation.z = stunned ? Math.sin(t * 18) * 0.04 : lerp(camera.rotation.z, 0, dt * 8);
+
+  // my sword pose
+  let tp = [0.38, -0.5, -0.75, -0.5, 0.15, 0.2];
+  if (me.def) tp = [0.05, -0.35, -0.7, -0.3, 0, 1.25];
+  if (stunned) tp = [0.38, -0.8, -0.6, 0.6, 0, 0.2];
+  const sp = mySwingT > 0 ? (now - mySwingT) / 280 : 2;
+  if (sp < 1) {
+    const e = Math.sin(sp * Math.PI * 0.5);
+    swordGroup.position.set(0.3 - e * 0.3, -0.45, -0.8 - Math.sin(sp * Math.PI) * 0.3);
+    swordGroup.rotation.set(-0.2 - e * 1.4, 0.1, -0.9 + e * 1.8);
+  } else {
+    swordGroup.position.set(lerp(swordGroup.position.x, tp[0], dt * 14), lerp(swordGroup.position.y, tp[1], dt * 14), lerp(swordGroup.position.z, tp[2], dt * 14));
+    swordGroup.rotation.set(lerp(swordGroup.rotation.x, tp[3], dt * 14), lerp(swordGroup.rotation.y, tp[4], dt * 14), lerp(swordGroup.rotation.z, tp[5], dt * 14));
+  }
+  shieldFx.visible = me.def;
+  if (me.def) shieldFx.material.opacity = 0.2 + Math.sin(t * 20) * 0.05 + (now - me.since <= PARRY_MS ? 0.3 : 0);
+
+  // opponent avatar
+  const o = opp, bob = Math.abs(Math.sin(t * 3)) * 0.04;
+  const hurt = oppHurtT > 0 ? Math.max(0, 1 - (now - oppHurtT) / 600) : 0;
+  const oStun = now < ot.stunUntil;
+  o.group.position.y = bob;
+  o.group.position.x = Math.sin(t * 0.8) * 0.4;
+  o.group.rotation.set(-hurt * 0.4, Math.atan2(camera.position.x - o.group.position.x, camera.position.z - OPP_Z) + oppYaw * 0.3, oStun ? Math.sin(t * 22) * 0.08 : 0);
+  let phR = -1.8, phL = -1.2;
+  if (ot.def) { phR = -2.3; phL = -1.57; }
+  const osp = oppSwingT > 0 ? (now - oppSwingT) / 300 : 2;
+  if (osp < 1) phR = -3.0 + 2.2 * Math.sin(osp * Math.PI * 0.5);
+  o.armR.rotation.x = lerp(o.armR.rotation.x, phR, osp < 1 ? 1 : dt * 12);
+  o.armL.rotation.x = lerp(o.armL.rotation.x, phL, dt * 12);
+
+  cheer = Math.max(0.05, cheer - dt * 0.3);
+  updateCrowd(t);
+  updateSparks(dt);
+  renderer.render(scene, camera);
+}
+</script>
+</body>
 </html>
